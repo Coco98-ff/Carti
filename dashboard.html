@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mon tableau de bord — Carti</title>
+<style>
+  :root {
+    --bg: #0D0D0F;
+    --bg-secondary: #1A1A1D;
+    --gold: #C9A34D;
+    --gold-hover: #E0BC6E;
+    --text: #F5F2EC;
+    --text-secondary: #A0A0A5;
+    --border: #2A2A2E;
+    --error: #E5484D;
+    --success: #3FAE5D;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, 'Inter', sans-serif;
+    min-height: 100vh;
+    padding: 20px 16px 40px;
+  }
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+  .logo { font-size: 22px; font-weight: 700; color: var(--gold); }
+  .header-links { display: flex; gap: 16px; align-items: center; }
+  .shop-link { color: var(--gold); font-size: 13px; text-decoration: none; font-weight: 600; }
+  .logout { color: var(--text-secondary); font-size: 13px; cursor: pointer; }
+  .card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  h2 { font-size: 16px; margin-bottom: 14px; color: var(--text); }
+  .hint { font-size: 12px; color: var(--text-secondary); margin-bottom: 14px; margin-top: -8px; }
+  label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+    margin-top: 12px;
+  }
+  input, textarea {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 11px 13px;
+    color: var(--text);
+    font-size: 15px;
+    font-family: inherit;
+  }
+  input:focus, textarea:focus { outline: none; border-color: var(--gold); }
+  textarea { resize: vertical; min-height: 70px; }
+  button {
+    width: 100%;
+    background: var(--gold);
+    color: var(--bg);
+    border: none;
+    border-radius: 10px;
+    padding: 13px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 18px;
+  }
+  button:active { background: var(--gold-hover); }
+  button:disabled { opacity: 0.6; }
+  .btn-secondary {
+    background: transparent;
+    border: 1px solid var(--gold);
+    color: var(--gold);
+  }
+  .status-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .status-published { background: rgba(63,174,93,0.15); color: var(--success); }
+  .status-draft { background: rgba(160,160,165,0.15); color: var(--text-secondary); }
+  .link-preview {
+    background: var(--bg);
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    font-size: 13px;
+    color: var(--gold);
+    word-break: break-all;
+    margin-top: 10px;
+  }
+  .link-preview a { color: var(--gold); text-decoration: underline; }
+  .message {
+    margin-top: 14px;
+    font-size: 13px;
+    text-align: center;
+    padding: 10px;
+    border-radius: 8px;
+    display: none;
+  }
+  .message.error { display: block; background: rgba(229,72,77,0.15); color: var(--error); }
+  .message.success { display: block; background: rgba(63,174,93,0.15); color: var(--success); }
+  .loading { text-align: center; color: var(--text-secondary); padding: 40px; }
+
+  .social-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .social-icon {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    border-radius: 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+  }
+  .social-row input { margin: 0; }
+
+  .photo-upload-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 14px;
+  }
+  .photo-preview {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: var(--bg);
+    border: 2px solid var(--gold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--gold);
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .photo-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .upload-btn-wrapper {
+    flex: 1;
+  }
+  .upload-label {
+    display: block;
+    background: transparent;
+    border: 1px solid var(--gold);
+    color: var(--gold);
+    border-radius: 10px;
+    padding: 11px;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+    cursor: pointer;
+  }
+  .upload-label input[type="file"] { display: none; }
+  .upload-status { font-size: 12px; color: var(--text-secondary); margin-top: 6px; }
+
+  .stats-grid {
+    display: flex;
+    gap: 12px;
+  }
+  .stat-box {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    text-align: center;
+  }
+  .stat-number {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--gold);
+  }
+  .stat-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+  }
+
+  .gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 14px;
+  }
+  .gallery-item {
+    position: relative;
+    aspect-ratio: 1;
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--bg);
+    border: 1px solid var(--border);
+  }
+  .gallery-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .gallery-item .remove-btn {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.7);
+    color: var(--error);
+    border: none;
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .locked-notice {
+    background: var(--bg);
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+  .locked-notice a { color: var(--gold); text-decoration: none; font-weight: 600; }
+</style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="logo">Carti</div>
+    <div class="header-links">
+      <a class="shop-link" href="shop.html">🛍 Boutique</a>
+      <div class="logout" onclick="logout()">Déconnexion</div>
+    </div>
+  </div>
+
+  <div class="card" id="stats-card" style="display:none">
+    <h2>Mes statistiques</h2>
+    <div class="stats-grid">
+      <div class="stat-box">
+        <div class="stat-number" id="stat-views-total">0</div>
+        <div class="stat-label">Vues totales</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-number" id="stat-views-week">0</div>
+        <div class="stat-label">Cette semaine</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-number" id="stat-vcf-total">0</div>
+        <div class="stat-label">Contacts enregistrés</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="loading" class="loading">Chargement...</div>
+
+  <div id="content" style="display:none">
+
+    <div class="card">
+      <h2>Ma carte <span id="status-badge" class="status-badge status-draft">Brouillon</span></h2>
+
+      <label>Photo de profil</label>
+      <div class="photo-upload-row">
+        <div class="photo-preview" id="photo-preview">?</div>
+        <div class="upload-btn-wrapper">
+          <label class="upload-label">
+            Choisir une photo
+            <input type="file" id="photo-input" accept="image/*" onchange="handlePhotoUpload(event)">
+          </label>
+          <div class="upload-status" id="upload-status"></div>
+        </div>
+      </div>
+
+      <label>Nom complet *</label>
+      <input type="text" id="full_name" placeholder="Nicole Houansou">
+
+      <label>Poste / Métier</label>
+      <input type="text" id="job_title" placeholder="Fondatrice">
+
+      <label>Entreprise</label>
+      <input type="text" id="company_name" placeholder="Irex Digital">
+
+      <label>Bio</label>
+      <textarea id="bio" placeholder="Je transforme vos idées en présence digitale."></textarea>
+
+      <label>Téléphone</label>
+      <input type="tel" id="phone" placeholder="+229 ...">
+
+      <label>WhatsApp</label>
+      <input type="tel" id="whatsapp" placeholder="+229 ...">
+
+      <label>Email</label>
+      <input type="email" id="email" placeholder="contact@...">
+
+      <label>Site web</label>
+      <input type="url" id="website" placeholder="https://...">
+
+      <label>Adresse</label>
+      <input type="text" id="address" placeholder="Parakou, Bénin">
+
+      <label>Lien Google Maps</label>
+      <input type="url" id="google_maps_url" placeholder="https://maps.app.goo.gl/...">
+
+      <label>Lien personnalisé (slug) *</label>
+      <input type="text" id="slug" placeholder="nicole" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9-]/g,'')">
+      <div class="link-preview" id="link-preview">https://coco98-ff.github.io/Carti/card.html?slug=votre-lien</div>
+
+      <button onclick="saveCard()">Enregistrer</button>
+      <button class="btn-secondary" onclick="togglePublish()" id="publish-btn">Publier ma carte</button>
+    </div>
+
+    <div class="card">
+      <h2>Réseaux sociaux</h2>
+      <div class="hint">Laisse vide les réseaux que tu n'utilises pas.</div>
+
+      <div class="social-row">
+        <div class="social-icon">📘</div>
+        <input type="url" id="social_facebook" placeholder="Lien Facebook">
+      </div>
+      <div class="social-row">
+        <div class="social-icon">💼</div>
+        <input type="url" id="social_linkedin" placeholder="Lien LinkedIn">
+      </div>
+      <div class="social-row">
+        <div class="social-icon">📸</div>
+        <input type="url" id="social_instagram" placeholder="Lien Instagram">
+      </div>
+      <div class="social-row">
+        <div class="social-icon">🎵</div>
+        <input type="url" id="social_tiktok" placeholder="Lien TikTok">
+      </div>
+      <div class="social-row">
+        <div class="social-icon">▶️</div>
+        <input type="url" id="social_youtube" placeholder="Lien YouTube">
+      </div>
+      <div class="social-row">
+        <div class="social-icon">✈️</div>
+        <input type="url" id="social_telegram" placeholder="Lien Telegram">
+      </div>
+
+      <button onclick="saveSocialLinks()">Enregistrer les réseaux sociaux</button>
+    </div>
+
+    <div class="card" id="gallery-card">
+      <h2>🖼 Galerie photo</h2>
+      <div id="gallery-locked" class="locked-notice" style="display:none">
+        Ce module n'est pas encore débloqué. <a href="shop.html">Voir la boutique →</a>
+      </div>
+      <div id="gallery-unlocked" style="display:none">
+        <div class="hint">Ajoute jusqu'à 9 photos de tes réalisations.</div>
+        <div class="gallery-grid" id="gallery-grid"></div>
+        <label class="upload-label" style="margin-top:14px; display:block;">
+          Ajouter une photo
+          <input type="file" id="gallery-input" accept="image/*" onchange="handleGalleryUpload(event)" style="display:none">
+        </label>
+      </div>
+    </div>
+
+    <div id="message" class="message"></div>
+
+  </div>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+
+    const SUPABASE_URL = 'https://arjzcloshiqucpyqbotl.supabase.co'
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFyanpjbG9zaGlxdWNweXFib3RsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ3MjY1NzYsImV4cCI6MjEwMDMwMjU3Nn0.89gB9o1pqIv5G5nwPOpYqz6SrnK38AHTE8Ax7T3-OrE'
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    let currentUser = null
+    let currentCardId = null
+
+    const SOCIAL_PLATFORMS = ['facebook','linkedin','instagram','tiktok','youtube','telegram']
+
+    async function init() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        window.location.href = 'index.html'
+        return
+      }
+      currentUser = user
+
+      const { data: cards } = await supabase
+        .from('digital_cards')
+        .select('*')
+        .eq('owner_user_id', user.id)
+        .limit(1)
+
+      if (cards && cards.length > 0) {
+        const card = cards[0]
+        currentCardId = card.id
+        document.getElementById('full_name').value = card.full_name || ''
+        document.getElementById('job_title').value = card.job_title || ''
+        document.getElementById('company_name').value = card.company_name || ''
+        document.getElementById('bio').value = card.bio || ''
+        document.getElementById('phone').value = card.phone || ''
+        document.getElementById('whatsapp').value = card.whatsapp || ''
+        document.getElementById('email').value = card.email || ''
+        document.getElementById('website').value = card.website || ''
+        document.getElementById('address').value = card.address || ''
+        document.getElementById('google_maps_url').value = card.google_maps_url || ''
+        document.getElementById('slug').value = card.slug || ''
+        updatePublishUI(card.is_published)
+        updateLinkPreview()
+        updatePhotoPreview(card.photo_url, card.full_name)
+        loadStats(currentCardId)
+
+        const { data: links } = await supabase
+          .from('social_links')
+          .select('*')
+          .eq('card_id', currentCardId)
+
+        if (links) {
+          links.forEach(link => {
+            const el = document.getElementById('social_' + link.platform)
+            if (el) el.value = link.url
+          })
+        }
+      } else {
+        document.getElementById('full_name').value = user.user_metadata?.full_name || ''
+      }
+
+      await checkGalleryAccess()
+
+      document.getElementById('slug').addEventListener('input', updateLinkPreview)
+      document.getElementById('loading').style.display = 'none'
+      document.getElementById('content').style.display = 'block'
+    }
+
+    async function checkGalleryAccess() {
+      const { data: mod } = await supabase
+        .from('modules')
+        .select('id')
+        .eq('code', 'gallery')
+        .single()
+
+      if (!mod) return
+
+      const { data: unlocked } = await supabase
+        .from('user_modules')
+        .select('id')
+        .eq('user_id', currentUser.id)
+        .eq('module_id', mod.id)
+        .maybeSingle()
+
+      if (unlocked) {
+        document.getElementById('gallery-locked').style.display = 'none'
+        document.getElementById('gallery-unlocked').style.display = 'block'
+        if (currentCardId) loadGallery()
+      } else {
+        document.getElementById('gallery-locked').style.display = 'block'
+        document.getElementById('gallery-unlocked').style.display = 'none'
+      }
+    }
+
+    async function loadGallery() {
+      const { data: items } = await supabase
+        .from('gallery')
+        .select('*')
+        .eq('card_id', currentCardId)
+        .order('display_order', { ascending: true })
+
+      const grid = document.getElementById('gallery-grid')
+      grid.innerHTML = (items || []).map(item => `
+        <div class="gallery-item">
+          <img src="${item.media_url}" alt="">
+          <button class="remove-btn" onclick="removeGalleryItem('${item.id}')">✕</button>
+        </div>
+      `).join('')
+    }
+
+    window.handleGalleryUpload = async function(event) {
+      const file = event.target.files[0]
+      if (!file || !currentCardId) return
+
+      const fileExt = file.name.split('.').pop()
+      const filePath = currentUser.id + '/gallery_' + Date.now() + '.' + fileExt
+
+      const { error: uploadError } = await supabase.storage
+        .from('card-photos')
+        .upload(filePath, file)
+
+      if (uploadError) {
+        showMessage('Erreur upload : ' + uploadError.message, 'error')
+        return
+      }
+
+      const { data: urlData } = supabase.storage
+        .from('card-photos')
+        .getPublicUrl(filePath)
+
+      await supabase.from('gallery').insert({
+        card_id: currentCardId,
+        media_url: urlData.publicUrl
+      })
+
+      loadGallery()
+      showMessage('Photo ajoutée à la galerie !', 'success')
+    }
+
+    window.removeGalleryItem = async function(itemId) {
+      await supabase.from('gallery').delete().eq('id', itemId)
+      loadGallery()
+    }
+
+    async function loadStats(cardId) {
+      const { count: totalViews } = await supabase
+        .from('analytics')
+        .select('*', { count: 'exact', head: true })
+        .eq('card_id', cardId)
+        .eq('event_type', 'view')
+
+      const weekAgo = new Date()
+      weekAgo.setDate(weekAgo.getDate() - 7)
+
+      const { count: weekViews } = await supabase
+        .from('analytics')
+        .select('*', { count: 'exact', head: true })
+        .eq('card_id', cardId)
+        .eq('event_type', 'view')
+        .gte('occurred_at', weekAgo.toISOString())
+
+      const { count: vcfTotal } = await supabase
+        .from('vcard_exports')
+        .select('*', { count: 'exact', head: true })
+        .eq('card_id', cardId)
+
+      document.getElementById('stat-views-total').textContent = totalViews || 0
+      document.getElementById('stat-views-week').textContent = weekViews || 0
+      document.getElementById('stat-vcf-total').textContent = vcfTotal || 0
+      document.getElementById('stats-card').style.display = 'block'
+    }
+
+    function updatePhotoPreview(photoUrl, fullName) {
+      const preview = document.getElementById('photo-preview')
+      if (photoUrl) {
+        preview.innerHTML = '<img src="' + photoUrl + '" alt="Photo">'
+      } else {
+        const initial = (fullName || '?').charAt(0).toUpperCase()
+        preview.textContent = initial
+      }
+    }
+
+    function updateLinkPreview() {
+      const slug = document.getElementById('slug').value || 'votre-lien'
+      const fullLink = 'https://coco98-ff.github.io/Carti/card.html?slug=' + slug
+      document.getElementById('link-preview').innerHTML = '<a href="' + fullLink + '" target="_blank">' + fullLink + '</a>'
+    }
+
+    function updatePublishUI(isPublished) {
+      const badge = document.getElementById('status-badge')
+      const btn = document.getElementById('publish-btn')
+      if (isPublished) {
+        badge.textContent = 'Publiée'
+        badge.className = 'status-badge status-published'
+        btn.textContent = 'Dépublier ma carte'
+      } else {
+        badge.textContent = 'Brouillon'
+        badge.className = 'status-badge status-draft'
+        btn.textContent = 'Publier ma carte'
+      }
+    }
+
+    function showMessage(text, type) {
+      const el = document.getElementById('message')
+      el.textContent = text
+      el.className = 'message ' + type
+      setTimeout(() => { el.className = 'message' }, 4000)
+    }
+
+    window.handlePhotoUpload = async function(event) {
+      const file = event.target.files[0]
+      if (!file) return
+
+      if (!currentUser) {
+        showMessage('Erreur : utilisateur non identifié.', 'error')
+        return
+      }
+
+      const statusEl = document.getElementById('upload-status')
+      statusEl.textContent = 'Envoi en cours...'
+
+      const fileExt = file.name.split('.').pop()
+      const filePath = currentUser.id + '/photo.' + fileExt
+
+      const { error: uploadError } = await supabase.storage
+        .from('card-photos')
+        .upload(filePath, file, { upsert: true })
+
+      if (uploadError) {
+        statusEl.textContent = ''
+        showMessage('Erreur upload : ' + uploadError.message, 'error')
+        return
+      }
+
+      const { data: urlData } = supabase.storage
+        .from('card-photos')
+        .getPublicUrl(filePath)
+
+      const photoUrl = urlData.publicUrl + '?t=' + Date.now()
+
+      updatePhotoPreview(photoUrl, document.getElementById('full_name').value)
+      statusEl.textContent = ''
+
+      if (currentCardId) {
+        const { error: updateError } = await supabase
+          .from('digital_cards')
+          .update({ photo_url: photoUrl })
+          .eq('id', currentCardId)
+
+        if (updateError) {
+          showMessage('Photo envoyée mais non liée à la carte : ' + updateError.message, 'error')
+          return
+        }
+      }
+
+      showMessage('Photo mise à jour !', 'success')
+    }
+
+    window.saveCard = async function() {
+      const full_name = document.getElementById('full_name').value.trim()
+      const slug = document.getElementById('slug').value.trim()
+
+      if (!full_name || !slug) {
+        showMessage('Nom complet et lien personnalisé sont obligatoires.', 'error')
+        return
+      }
+
+      const cardData = {
+        owner_user_id: currentUser.id,
+        full_name,
+        job_title: document.getElementById('job_title').value.trim(),
+        company_name: document.getElementById('company_name').value.trim(),
+        bio: document.getElementById('bio').value.trim(),
+        phone: document.getElementById('phone').value.trim(),
+        whatsapp: document.getElementById('whatsapp').value.trim(),
+        email: document.getElementById('email').value.trim(),
+        website: document.getElementById('website').value.trim(),
+        address: document.getElementById('address').value.trim(),
+        google_maps_url: document.getElementById('google_maps_url').value.trim(),
+        slug
+      }
+
+      let result
+      if (currentCardId) {
+        result = await supabase.from('digital_cards').update(cardData).eq('id', currentCardId).select()
+      } else {
+        result = await supabase.from('digital_cards').insert(cardData).select()
+      }
+
+      if (result.error) {
+        showMessage('Erreur : ' + result.error.message, 'error')
+        return
+      }
+
+      if (!currentCardId && result.data && result.data[0]) {
+        currentCardId = result.data[0].id
+        loadStats(currentCardId)
+        checkGalleryAccess()
+      }
+
+      updateLinkPreview()
+      showMessage('Carte enregistrée !', 'success')
+    }
+
+    window.saveSocialLinks = async function() {
+      if (!currentCardId) {
+        showMessage('Enregistrez d\'abord votre carte avant les réseaux sociaux.', 'error')
+        return
+      }
+
+      for (const platform of SOCIAL_PLATFORMS) {
+        const url = document.getElementById('social_' + platform).value.trim()
+
+        const { data: existing } = await supabase
+          .from('social_links')
+          .select('id')
+          .eq('card_id', currentCardId)
+          .eq('platform', platform)
+          .maybeSingle()
+
+        if (url) {
+          if (existing) {
+            await supabase.from('social_links').update({ url }).eq('id', existing.id)
+          } else {
+            await supabase.from('social_links').insert({ card_id: currentCardId, platform, url })
+          }
+        } else if (existing) {
+          await supabase.from('social_links').delete().eq('id', existing.id)
+        }
+      }
+
+      showMessage('Réseaux sociaux enregistrés !', 'success')
+    }
+
+    window.togglePublish = async function() {
+      if (!currentCardId) {
+        showMessage('Enregistrez d\'abord votre carte.', 'error')
+        return
+      }
+
+      const { data: current } = await supabase
+        .from('digital_cards')
+        .select('is_published')
+        .eq('id', currentCardId)
+        .single()
+
+      const newStatus = !current.is_published
+
+      const { error } = await supabase
+        .from('digital_cards')
+        .update({ is_published: newStatus })
+        .eq('id', currentCardId)
+
+      if (error) {
+        showMessage('Erreur : ' + error.message, 'error')
+        return
+      }
+
+      updatePublishUI(newStatus)
+      showMessage(newStatus ? 'Carte publiée !' : 'Carte dépubliée.', 'success')
+    }
+
+    window.logout = async function() {
+      await supabase.auth.signOut()
+      window.location.href = 'index.html'
+    }
+
+    init()
+  </script>
+
+</body>
+</html>
