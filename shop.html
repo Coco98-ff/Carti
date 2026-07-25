@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Boutique — Carti</title>
+<style>
+  :root {
+    --bg: #0D0D0F;
+    --bg-secondary: #1A1A1D;
+    --gold: #C9A34D;
+    --gold-hover: #E0BC6E;
+    --text: #F5F2EC;
+    --text-secondary: #A0A0A5;
+    --border: #2A2A2E;
+    --success: #3FAE5D;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, 'Inter', sans-serif;
+    min-height: 100vh;
+    padding: 20px 16px 40px;
+  }
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  .logo { font-size: 22px; font-weight: 700; color: var(--gold); }
+  .back { color: var(--text-secondary); font-size: 13px; cursor: pointer; text-decoration: none; }
+  h1 { font-size: 18px; margin-bottom: 6px; }
+  .subtitle { color: var(--text-secondary); font-size: 13px; margin-bottom: 20px; }
+  .module-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 14px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+  .module-icon {
+    font-size: 30px;
+    width: 50px;
+    text-align: center;
+  }
+  .module-info { flex: 1; }
+  .module-name { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+  .module-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.4; margin-bottom: 10px; }
+  .module-price { font-size: 14px; color: var(--gold); font-weight: 600; margin-bottom: 10px; }
+  .module-btn {
+    background: var(--gold);
+    color: var(--bg);
+    border: none;
+    border-radius: 8px;
+    padding: 9px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .module-btn:active { background: var(--gold-hover); }
+  .module-btn.active {
+    background: rgba(63,174,93,0.15);
+    color: var(--success);
+    cursor: default;
+  }
+  .loading { text-align: center; color: var(--text-secondary); padding: 40px; }
+</style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="logo">Carti</div>
+    <a class="back" href="dashboard.html">← Tableau de bord</a>
+  </div>
+
+  <h1>Boutique de modules</h1>
+  <div class="subtitle">Débloquez des fonctionnalités supplémentaires pour votre carte.</div>
+
+  <div id="loading" class="loading">Chargement...</div>
+  <div id="modules-list"></div>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+
+    const SUPABASE_URL = 'https://arjzcloshiqucpyqbotl.supabase.co'
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFyanpjbG9zaGlxdWNweXFib3RsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ3MjY1NzYsImV4cCI6MjEwMDMwMjU3Nn0.89gB9o1pqIv5G5nwPOpYqz6SrnK38AHTE8Ax7T3-OrE'
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+
+    let currentUser = null
+
+    async function init() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        window.location.href = 'index.html'
+        return
+      }
+      currentUser = user
+
+      const { data: modules } = await supabase
+        .from('modules')
+        .select('*')
+        .eq('is_active', true)
+
+      const { data: userModules } = await supabase
+        .from('user_modules')
+        .select('module_id')
+        .eq('user_id', user.id)
+
+      const unlockedIds = (userModules || []).map(um => um.module_id)
+
+      renderModules(modules || [], unlockedIds)
+
+      document.getElementById('loading').style.display = 'none'
+    }
+
+    function renderModules(modules, unlockedIds) {
+      const container = document.getElementById('modules-list')
+      container.innerHTML = modules.map(mod => {
+        const isUnlocked = unlockedIds.includes(mod.id)
+        return `
+          <div class="module-card">
+            <div class="module-icon">${mod.icon || '📦'}</div>
+            <div class="module-info">
+              <div class="module-name">${mod.name}</div>
+              <div class="module-desc">${mod.description || ''}</div>
+              <div class="module-price">${mod.price > 0 ? mod.price + ' ' + mod.currency : 'Gratuit'}</div>
+              <button class="module-btn ${isUnlocked ? 'active' : ''}"
+                onclick="${isUnlocked ? '' : `window.unlockModule('${mod.id}')`}"
+                ${isUnlocked ? 'disabled' : ''}>
+                ${isUnlocked ? '✓ Débloqué' : 'Débloquer'}
+              </button>
+            </div>
+          </div>
+        `
+      }).join('')
+    }
+
+    window.unlockModule = async function(moduleId) {
+      // NOTE : ceci est une activation simulée (pas de vrai paiement pour l'instant).
+      // À remplacer plus tard par un vrai flux de paiement FedaPay/Kkiapay
+      // qui déclenchera l'activation via une Edge Function sécurisée.
+      const { error } = await supabase
+        .from('user_modules')
+        .insert({ user_id: currentUser.id, module_id: moduleId })
+
+      if (error) {
+        alert('Erreur : ' + error.message)
+        return
+      }
+
+      init()
+    }
+
+    init()
+  </script>
+
+</body>
+</html>
