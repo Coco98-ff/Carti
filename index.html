@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carti — Votre carte de visite numérique</title>
+<link rel="manifest" href="manifest.json">
+<style>
+  :root {
+    --bg: #0D0D0F;
+    --bg-secondary: #1A1A1D;
+    --gold: #C9A34D;
+    --gold-hover: #E0BC6E;
+    --text: #F5F2EC;
+    --text-secondary: #A0A0A5;
+    --border: #2A2A2E;
+    --error: #E5484D;
+    --success: #3FAE5D;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, 'Inter', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .logo {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--gold);
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
+  }
+  .tagline {
+    color: var(--text-secondary);
+    margin-bottom: 32px;
+    text-align: center;
+    font-size: 15px;
+  }
+  .card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    width: 100%;
+    max-width: 360px;
+  }
+  .tabs {
+    display: flex;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .tab {
+    flex: 1;
+    text-align: center;
+    padding: 10px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    font-weight: 500;
+  }
+  .tab.active {
+    color: var(--gold);
+    border-bottom: 2px solid var(--gold);
+  }
+  input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-size: 15px;
+    margin-bottom: 12px;
+  }
+  input:focus {
+    outline: none;
+    border-color: var(--gold);
+  }
+  button {
+    width: 100%;
+    background: var(--gold);
+    color: var(--bg);
+    border: none;
+    border-radius: 10px;
+    padding: 13px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 8px;
+  }
+  button:active { background: var(--gold-hover); }
+  button:disabled { opacity: 0.6; }
+  .message {
+    margin-top: 14px;
+    font-size: 13px;
+    text-align: center;
+    padding: 10px;
+    border-radius: 8px;
+    display: none;
+  }
+  .message.error { display: block; background: rgba(229,72,77,0.15); color: var(--error); }
+  .message.success { display: block; background: rgba(63,174,93,0.15); color: var(--success); }
+  .form { display: none; }
+  .form.active { display: block; }
+</style>
+</head>
+<body>
+
+  <div class="logo">Carti</div>
+  <div class="tagline">Votre carte de visite, réinventée.</div>
+
+  <div class="card">
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('login')">Connexion</div>
+      <div class="tab" onclick="switchTab('signup')">Inscription</div>
+    </div>
+
+    <div id="login-form" class="form active">
+      <input type="email" id="login-email" placeholder="Email" autocomplete="email">
+      <input type="password" id="login-password" placeholder="Mot de passe" autocomplete="current-password">
+      <button onclick="login()">Se connecter</button>
+    </div>
+
+    <div id="signup-form" class="form">
+      <input type="text" id="signup-name" placeholder="Nom complet">
+      <input type="email" id="signup-email" placeholder="Email" autocomplete="email">
+      <input type="password" id="signup-password" placeholder="Mot de passe (6 caractères min)" autocomplete="new-password">
+      <button onclick="signup()">Créer mon compte</button>
+    </div>
+
+    <div id="message" class="message"></div>
+  </div>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+
+    // ⚠️ À REMPLACER avec tes propres identifiants Supabase
+    const SUPABASE_URL = 'https://arjzcloshiqucpyqbotl.supabase.co'
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFyanpjbG9zaGlxdWNweXFib3RsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ3MjY1NzYsImV4cCI6MjEwMDMwMjU3Nn0.89gB9o1pqIv5G5nwPOpYqz6SrnK38AHTE8Ax7T3-OrE'
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    window.supabase = supabase
+
+    window.switchTab = function(tab) {
+      document.getElementById('login-form').classList.toggle('active', tab === 'login')
+      document.getElementById('signup-form').classList.toggle('active', tab === 'signup')
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'))
+      event.target.classList.add('active')
+      hideMessage()
+    }
+
+    function showMessage(text, type) {
+      const el = document.getElementById('message')
+      el.textContent = text
+      el.className = 'message ' + type
+    }
+
+    function hideMessage() {
+      document.getElementById('message').className = 'message'
+    }
+
+    window.signup = async function() {
+      const name = document.getElementById('signup-name').value.trim()
+      const email = document.getElementById('signup-email').value.trim()
+      const password = document.getElementById('signup-password').value
+
+      if (!name || !email || !password) {
+        showMessage('Merci de remplir tous les champs.', 'error')
+        return
+      }
+      if (password.length < 6) {
+        showMessage('Le mot de passe doit faire 6 caractères minimum.', 'error')
+        return
+      }
+
+      const { data, error } = await supabase.auth.signUp({
+        email, password,
+        options: { data: { full_name: name } }
+      })
+
+      if (error) {
+        showMessage(error.message, 'error')
+        return
+      }
+
+      // Créer la ligne dans public.users
+      if (data.user) {
+        await supabase.from('users').insert({
+          id: data.user.id,
+          full_name: name
+        })
+      }
+
+      showMessage('Compte créé ! Vérifiez votre email pour confirmer.', 'success')
+    }
+
+    window.login = async function() {
+      const email = document.getElementById('login-email').value.trim()
+      const password = document.getElementById('login-password').value
+
+      if (!email || !password) {
+        showMessage('Merci de remplir tous les champs.', 'error')
+        return
+      }
+
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+
+      if (error) {
+        showMessage(error.message, 'error')
+        return
+      }
+
+      showMessage('Connexion réussie !', 'success')
+      window.location.href = 'dashboard.html'
+    }
+  </script>
+
+</body>
+</html>
